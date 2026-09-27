@@ -1,0 +1,232 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ContactFlow | Gestion des contacts</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+    <a class="brand" href="/">Contact<span>Flow</span></a>
+    <span class="top-label">Gestion de contacts</span>
+</header>
+
+<main class="container">
+
+    <section class="welcome">
+        <div>
+            <p class="eyebrow">ESPACE DE GESTION</p>
+            <h1>Mes contacts</h1>
+            <p class="subtitle">
+                Gérez facilement votre carnet de contacts.
+            </p>
+        </div>
+        <div class="total-card">
+            <span>Total des contacts</span>
+            <strong>{{ total }}</strong>
+        </div>
+    </section>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <section class="panel">
+        <h2>Ajouter un contact</h2>
+
+        <form action="{{ url_for('ajouter') }}" method="POST"
+              class="contact-form">
+
+            <div class="field">
+                <label for="prenom">Prénom *</label>
+                <input id="prenom" name="prenom" required
+                       maxlength="100" placeholder="Ex. Bergin">
+            </div>
+
+            <div class="field">
+                <label for="nom">Nom *</label>
+                <input id="nom" name="nom" required
+                       maxlength="100" placeholder="Ex. MABIALA">
+            </div>
+
+            <div class="field">
+                <label for="telephone">Téléphone *</label>
+                <input id="telephone" name="telephone" required
+                       maxlength="30" placeholder="+225 07...">
+            </div>
+
+            <div class="field">
+                <label for="email">E-mail *</label>
+                <input id="email" name="email" type="email" required
+                       maxlength="150" placeholder="nom@exemple.com">
+            </div>
+
+            <div class="field full">
+                <label for="entreprise">Entreprise</label>
+                <input id="entreprise" name="entreprise"
+                       maxlength="150" placeholder="Entreprise ou organisation">
+            </div>
+
+            <button class="btn primary full" type="submit">
+                + Ajouter le contact
+            </button>
+        </form>
+    </section>
+
+    <section class="panel">
+        <div class="list-header">
+            <div>
+                <h2>Répertoire</h2>
+                <p class="muted">{{ contacts|length }} résultat(s)</p>
+            </div>
+
+            <form action="/" method="GET" class="search-form">
+                <input type="search" name="q" value="{{ recherche }}"
+                       placeholder="Rechercher un contact...">
+                <button class="btn dark" type="submit">Rechercher</button>
+                {% if recherche %}
+                    <a class="btn light" href="/">Effacer</a>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Contact</th>
+                        <th>Téléphone</th>
+                        <th>E-mail</th>
+                        <th>Entreprise</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for c in contacts %}
+                    <tr>
+                        <td>
+                            <div class="person">
+                                <div class="avatar">
+                                    {{ c.prenom[0]|upper }}{{ c.nom[0]|upper }}
+                                </div>
+                                <div>
+                                    <strong>{{ c.prenom }} {{ c.nom }}</strong>
+                                    <small>ID : {{ c.id }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ c.telephone }}</td>
+                        <td>{{ c.email }}</td>
+                        <td>{{ c.entreprise or "—" }}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn edit"
+                                    type="button"
+                                    data-id="{{ c.id }}"
+                                    data-nom="{{ c.nom }}"
+                                    data-prenom="{{ c.prenom }}"
+                                    data-telephone="{{ c.telephone }}"
+                                    data-email="{{ c.email }}"
+                                    data-entreprise="{{ c.entreprise or '' }}"
+                                    onclick="ouvrirEdition(this)">
+                                    Modifier
+                                </button>
+
+                                <form action="{{ url_for('supprimer', contact_id=c.id) }}"
+                                      method="POST"
+                                      onsubmit="return confirm('Supprimer ce contact ?')">
+                                    <button class="btn delete" type="submit">
+                                        Supprimer
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="empty">
+                            Aucun contact trouvé.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
+<!-- Fenêtre de modification -->
+<div class="modal" id="modal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h2>Modifier le contact</h2>
+            <button type="button" class="close"
+                    onclick="fermerEdition()">×</button>
+        </div>
+
+        <form id="edit-form" method="POST" class="contact-form">
+            <div class="field">
+                <label>Prénom *</label>
+                <input name="prenom" id="edit-prenom" required maxlength="100">
+            </div>
+            <div class="field">
+                <label>Nom *</label>
+                <input name="nom" id="edit-nom" required maxlength="100">
+            </div>
+            <div class="field">
+                <label>Téléphone *</label>
+                <input name="telephone" id="edit-telephone"
+                       required maxlength="30">
+            </div>
+            <div class="field">
+                <label>E-mail *</label>
+                <input name="email" id="edit-email"
+                       type="email" required maxlength="150">
+            </div>
+            <div class="field full">
+                <label>Entreprise</label>
+                <input name="entreprise" id="edit-entreprise" maxlength="150">
+            </div>
+
+            <div class="modal-actions full">
+                <button class="btn light" type="button"
+                        onclick="fermerEdition()">Annuler</button>
+                <button class="btn primary" type="submit">
+                    Enregistrer les modifications
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function ouvrirEdition(button) {
+    const id = button.dataset.id;
+    document.getElementById("edit-form").action = "/modifier/" + id;
+
+    ["nom", "prenom", "telephone", "email", "entreprise"].forEach(champ => {
+        document.getElementById("edit-" + champ).value =
+            button.dataset[champ] || "";
+    });
+
+    document.getElementById("modal").classList.add("visible");
+}
+
+function fermerEdition() {
+    document.getElementById("modal").classList.remove("visible");
+}
+
+document.getElementById("modal").addEventListener("click", function(event) {
+    if (event.target === this) fermerEdition();
+});
+</script>
+
+</body>
+</html>
